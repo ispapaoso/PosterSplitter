@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Poster Splitter — local</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#20242b;background:#f4f5f7}
+*{box-sizing:border-box}body{margin:0;padding:24px}main{max-width:1050px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+h1{font-size:25px;margin:0}header p{margin:4px 0 0;color:#68707c;font-size:14px}
+.tag{background:#e3f5e9;color:#176b36;padding:6px 10px;border-radius:20px;font-size:12px;font-weight:650}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}
+.panel{background:white;border:1px solid #e0e3e8;border-radius:16px;padding:18px;box-shadow:0 2px 8px #20242b08}
+.upload{border:2px dashed #c8ced8;border-radius:12px;padding:25px 15px;text-align:center;background:#fafbfc;cursor:pointer}
+.upload.drag{border-color:#426bd8;background:#f1f5ff}.upload strong{display:block;margin:7px 0 3px}.muted{color:#737c89;font-size:13px}
+input,select{width:100%;border:1px solid #cfd5de;border-radius:9px;padding:10px;background:white;color:#20242b;font:inherit}
+label{font-size:13px;font-weight:650;display:block;margin:0 0 6px}.field{min-width:0}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+h2{font-size:15px;margin:21px 0 10px}
+hr{border:0;border-top:1px solid #eceef1;margin:18px 0}
+.check{display:flex;align-items:center;gap:9px;font-size:13px;margin:12px 0}.check input{width:auto}
+button{border:0;border-radius:10px;padding:12px 15px;font:inherit;font-weight:700;cursor:pointer}
+.primary{background:#2458cf;color:white;width:100%;margin-top:15px}.primary:disabled{opacity:.45;cursor:not-allowed}
+.secondary{background:#eef1f5;color:#303946}
+.previewWrap{display:flex;align-items:center;justify-content:center;min-height:260px;background:#f7f8fa;border-radius:12px;padding:15px}
+#preview{max-width:100%;max-height:340px;display:block;box-shadow:0 2px 9px #0002;background:white}
+.stats{font-size:13px;color:#505966;line-height:1.7;margin-top:12px}
+.small{font-size:12px;color:#77808c;line-height:1.5}
+#filename{margin-top:9px;overflow-wrap:anywhere;font-size:13px}
+.hidden{display:none!important}
+@media(max-width:800px){body{padding:14px}.layout{grid-template-columns:1fr}header{align-items:flex-start}.tag{white-space:nowrap}}
+</style>
+</head>
+<body>
+<main>
+<header><div><h1>Poster Splitter</h1><p>Dividí una imagen en hojas listas para imprimir a tamaño real.</p></div><span class="tag">100% local · sin internet</span></header>
+<div class="layout">
+<section class="panel">
+  <label class="upload" id="drop">
+    <input id="file" type="file" accept="image/*" class="hidden">
+    <div style="font-size:30px">＋</div><strong>Elegí o arrastrá una imagen</strong>
+    <span class="muted">PNG, JPG, WEBP y otros formatos que abra tu navegador</span>
+    <div id="filename" class="muted"></div>
+  </label>
+  <h2>1. Papel</h2>
+  <div class="fields">
+    <div class="field"><label for="paper">Formato</label><select id="paper">
+      <option value="a4">A4 (21 × 29,7 cm)</option><option value="a3">A3 (29,7 × 42 cm)</option>
+      <option value="letter">Carta (21,59 × 27,94 cm)</option><option value="legal">Legal (21,59 × 35,56 cm)</option>
+      <option value="oficio">Oficio (21,6 × 33 cm)</option><option value="custom">Personalizado</option>
+    </select></div>
+    <div class="field"><label for="orientation">Orientación</label><select id="orientation"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select></div>
+  </div>
+  <div class="fields hidden" id="customFields">
+    <div class="field"><label for="paperW">Ancho papel (cm)</label><input id="paperW" type="number" min="5" max="100" step=".1" value="21"></div>
+    <div class="field"><label for="paperH">Alto papel (cm)</label><input id="paperH" type="number" min="5" max="100" step=".1" value="29.7"></div>
+  </div>
+  <h2>2. Cómo dividir</h2>
+  <div class="fields">
+    <div class="field"><label for="mode">Modo</label><select id="mode"><option value="grid">Cantidad de hojas</option><option value="height">Altura real</option><option value="width">Ancho real</option></select></div>
+    <div class="field"><label for="fit">Ajuste de imagen</label><select id="fit"><option value="contain">Completa (puede dejar blanco)</option><option value="cover">Llenar (puede recortar)</option></select></div>
+  </div>
+  <div id="gridFields" class="fields">
+    <div class="field"><label for="cols">Hojas de ancho</label><input id="cols" type="number" min="1" max="30" value="3"></div>
+    <div class="field"><label for="rows">Hojas de alto</label><input id="rows" type="number" min="1" max="30" value="3"></div>
+  </div>
+  <div id="realFields" class="fields hidden">
+    <div class="field"><label id="realLabel" for="realSize">Altura total (cm)</label><input id="realSize" type="number" min="1" max="2000" step=".1" value="165"></div>
+    <div class="field"><label for="realUnit">Unidad</label><select id="realUnit"><option value="cm">Centímetros</option><option value="mm">Milímetros</option></select></div>
+  </div>
+  <h2>3. Impresión y armado</h2>
+  <div class="fields">
+    <div class="field"><label for="margin">Margen no imprimible (cm)</label><input id="margin" type="number" min="0" max="5" step=".1" value="0.5"></div>
+    <div class="field"><label for="overlap">Solapamiento (cm)</label><input id="overlap" type="number" min="0" max="5" step=".1" value="1"></div>
+  </div>
+  <label class="check"><input id="marks" type="checkbox" checked> Marcas de corte</label>
+  <label class="check"><input id="numbers" type="checkbox" checked> Numerar páginas (fila por fila)</label>
+  <p class="small">El margen reserva una zona sin imagen para impresoras domésticas. El solapamiento repite una franja de imagen entre hojas para facilitar el pegado.</p>
+</section>
+<aside class="panel">
+  <h2 style="margin-top:0">Vista previa</h2>
+  <div class="previewWrap"><canvas id="preview" width="500" height="500"></canvas></div>
+  <div id="stats" class="stats">Cargá una imagen para ver la división.</div>
+  <button id="export" class="primary" disabled>↓ Generar PDF</button>
+  <p class="small">El PDF se crea en esta pestaña y se descarga en tu equipo. Para imprimir, elegí “Tamaño real” o escala 100% y desactivá “Ajustar a página”.</p>
+</aside>
+</div>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const sizes={a4:[21,29.7],a3:[29.7,42],letter:[21.59,27.94],legal:[21.59,35.56],oficio:[21.6,33]};
+let img=null, filename='';
+const fields=['paper','orientation','paperW','paperH','mode','fit','cols','rows','realSize','realUnit','margin','overlap','marks','numbers'];
+function val(id){return $(id).type==='checkbox'?$(id).checked:$(id).value}
+function num(id){return Math.max(0,Number($(id).value)||0)}
+function config(){
+ let [pw,ph]=sizes[val('paper')]||[num('paperW'),num('paperH')];
+ if(val('paper')==='custom'){pw=num('paperW');ph=num('paperH')}
+ if(val('orientation')==='landscape')[pw,ph]=[ph,pw];
+ const m=Math.min(num('margin'),Math.min(pw,ph)/3), uw=pw-2*m, uh=ph-2*m, ov=Math.min(num('overlap'),Math.min(uw,uh)*.4);
+ if(uw<=0||uh<=0)throw Error('El margen es demasiado grande para el papel.');
+ let cols,rows,posterW,posterH;
+ const mode=val('mode');
+ if(mode==='grid'){
+  cols=Math.max(1,Math.min(30,Math.round(num('cols')||1)));
+  rows=Math.max(1,Math.min(30,Math.round(num('rows')||1)));
+  posterW=cols*uw-(cols-1)*ov; posterH=rows*uh-(rows-1)*ov;
+ }else{
+  const requested=num('realSize')*(val('realUnit')==='mm'?.1:1);
+  if(requested<=0)throw Error('Ingresá un tamaño real mayor que cero.');
+  const ratio=img?img.width/img.height:1;
+  if(mode==='height'){
+   posterH=requested;posterW=posterH*ratio;
+   rows=Math.max(1,Math.ceil((posterH-ov)/(uh-ov)));
+   cols=Math.max(1,Math.ceil((posterW-ov)/(uw-ov)));
+  }else{
+   posterW=requested;posterH=posterW/ratio;
+   cols=Math.max(1,Math.ceil((posterW-ov)/(uw-ov)));
+   rows=Math.max(1,Math.ceil((posterH-ov)/(uh-ov)));
+  }
+  if(cols>30||rows>30)throw Error('Ese tamaño necesita más de 30 hojas en una dirección. Aumentá el formato o reducí el tamaño.');
+  // Ajusta la retícula al tamaño solicitado, conservando exactamente la dimensión real.
+ }
+ return {pw,ph,m,uw,uh,ov,cols,rows,posterW,posterH};
+}
+function drawPreview(){
+ const c=$('preview'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+ if(!img){ctx.fillStyle='#e9edf2';ctx.fillRect(0,0,c.width,c.height);return}
+ let g;try{g=config()}catch(e){$('stats').textContent=e.message;return}
+ const scale=Math.min(450/g.posterW,450/g.posterH),w=g.posterW*scale,h=g.posterH*scale,x=(500-w)/2,y=(500-h)/2;
+ ctx.fillStyle='#fff';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#aeb7c4';ctx.lineWidth=1;
+ const tileW=(g.posterW+(g.cols-1)*g.ov)/g.cols, tileH=(g.posterH+(g.rows-1)*g.ov)/g.rows;
+ for(let i=0;i<=g.cols;i++){let xx=x+(i*(tileW-g.ov)+(i===g.cols?g.ov:0))*scale;ctx.beginPath();ctx.moveTo(xx,y);ctx.lineTo(xx,y+h);ctx.stroke()}
+ for(let j=0;j<=g.rows;j++){let yy=y+(j*(tileH-g.ov)+(j===g.rows?g.ov:0))*scale;ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x+w,yy);ctx.stroke()}
+ ctx.fillStyle='#263243';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(`${g.cols} × ${g.rows} hojas`,250,Math.max(14,y-8));
+ const fit=val('fit');
+ const s=fit==='cover'?Math.max(w/img.width,h/img.height):Math.min(w/img.width,h/img.height);
+ const dw=img.width*s,dh=img.height*s;
+ ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.globalAlpha=.9;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);ctx.restore();
+ ctx.strokeStyle='#52657f';ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);
+ $('stats').innerHTML=`<b>${g.cols*g.rows} páginas</b> · ${g.cols} columnas × ${g.rows} filas<br>Área final: ${g.posterW.toFixed(1)} × ${g.posterH.toFixed(1)} cm<br>Papel: ${g.pw} × ${g.ph} cm · imagen ${img.width} × ${img.height} px`;
+}
+function update(){
+ $('customFields').classList.toggle('hidden',val('paper')!=='custom');
+ const real=val('mode')!=='grid';
+ $('gridFields').classList.toggle('hidden',real);$('realFields').classList.toggle('hidden',!real);
+ $('realLabel').textContent=val('mode')==='height'?'Altura total (cm)':'Ancho total (cm)';
+ $('export').disabled=!img;
+ drawPreview();
+}
+$('file').addEventListener('change',e=>loadFile(e.target.files[0]));
+function loadFile(file){if(!file)return;const url=URL.createObjectURL(file);const im=new Image();im.onload=()=>{img=im;filename=file.name;$('filename').textContent=filename;URL.revokeObjectURL(url);update()};im.onerror=()=>alert('No se pudo abrir esa imagen.');im.src=url}
+$('drop').addEventListener('dragover',e=>{e.preventDefault();$('drop').classList.add('drag')});
+$('drop').addEventListener('dragleave',()=>$('drop').classList.remove('drag'));
+$('drop').addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remove('drag');loadFile(e.dataTransfer.files[0])});
+fields.forEach(id=>$(id).addEventListener('input',update));
+function ascii(s){return new TextEncoder().encode(s)}
+function concat(parts){let n=parts.reduce((a,b)=>a+b.length,0),out=new Uint8Array(n),p=0;for(const b of parts){out.set(b,p);p+=b.length}return out}
+function makePdf(g){
+ const dpi=120, pageW=g.pw/2.54*72,pageH=g.ph/2.54*72;
+ const imageW=g.posterW/2.54*72,imageH=g.posterH/2.54*72;
+ const fit=val('fit'),scale=fit==='cover'?Math.max(imageW/img.width,imageH/img.height):Math.min(imageW/img.width,imageH/img.height);
+ const drawW=img.width*scale,drawH=img.height*scale,offX=(imageW-drawW)/2,offY=(imageH-drawH)/2;
+ const objects=[],add=(b)=>{objects.push(b);return objects.length};
+ const catalog=add(null),pages=add(null),pageIds=[];
+ for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++){
+  const ov=g.ov/2.54*72;
+  const tileW=(g.posterW+(g.cols-1)*g.ov)/g.cols/2.54*72;
+  const tileH=(g.posterH+(g.rows-1)*g.ov)/g.rows/2.54*72;
+  const usableW=g.uw/2.54*72,usableH=g.uh/2.54*72;
+  const sx=c*(tileW-ov),sy=r*(tileH-ov);
+  const pxW=Math.max(1,Math.round(tileW/72*dpi)),pxH=Math.max(1,Math.round(tileH/72*dpi));
+  const can=document.createElement('canvas');can.width=pxW;can.height=pxH;const cx=can.getContext('2d');
+  cx.fillStyle='#fff';cx.fillRect(0,0,pxW,pxH);
+  const posterPxW=imageW/72*dpi,posterPxH=imageH/72*dpi;
+  const scalePx=scale/72*dpi;
+  const dw=img.width*scalePx,dh=img.height*scalePx;
+  cx.save();cx.beginPath();cx.rect(0,0,pxW,pxH);cx.clip();
+  cx.drawImage(img,(offX-sx)/72*dpi,(offY-sy)/72*dpi,dw,dh);cx.restore();
+  const jpg=can.toDataURL('image/jpeg',.94).split(',')[1],bin=Uint8Array.from(atob(jpg),ch=>ch.charCodeAt(0));
+  const imgObj=add(concat([ascii(`<< /Type /XObject /Subtype /Image /Width ${pxW} /Height ${pxH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bin.length} >>\nstream\n`),bin,ascii('\nendstream')]));
+  const x=g.m/2.54*72+(usableW-tileW)/2,y=g.m/2.54*72+(usableH-tileH)/2;
+  let content=`q\n${tileW.toFixed(3)} 0 0 ${tileH.toFixed(3)} ${x.toFixed(3)} ${y.toFixed(3)} cm\n/Im${r*g.cols+c} Do\nQ\n`;
+  if(val('marks')){const len=8;content+=`0.5 w 0 G\n${(x-4).toFixed(2)} ${y.toFixed(2)} m ${(x).toFixed(2)} ${y.toFixed(2)} l S\n${(x+tileW).toFixed(2)} ${y.toFixed(2)} m ${(x+tileW+4).toFixed(2)} ${y.toFixed(2)} l S\n${(x-4).toFixed(2)} ${(y+tileH).toFixed(2)} m ${x.toFixed(2)} ${(y+tileH).toFixed(2)} l S\n${(x+tileW).toFixed(2)} ${(y+tileH).toFixed(2)} m ${(x+tileW+4).toFixed(2)} ${(y+tileH).toFixed(2)} l S\n`;}
+  if(val('numbers'))content+=`BT /F1 8 Tf 0 g ${(x).toFixed(2)} ${(Math.max(5,y-12)).toFixed(2)} Td (${r*g.cols+c+1} / ${g.rows*g.cols}) Tj ET\n`;
+  const stream=ascii(content),contentObj=add(concat([ascii(`<< /Length ${stream.length} >>\nstream\n`),stream,ascii('endstream')]));
+  const pageObj=add(ascii(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW.toFixed(3)} ${pageH.toFixed(3)}] /Resources << /XObject << /Im${r*g.cols+c} ${imgObj} 0 R >> /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents ${contentObj} 0 R >>`));
+  pageIds.push(pageObj);
+ }
+ objects[catalog-1]=ascii('<< /Type /Catalog /Pages 2 0 R >>');
+ objects[pages-1]=ascii(`<< /Type /Pages /Kids [${pageIds.map(n=>`${n} 0 R`).join(' ')}] /Count ${pageIds.length} >>`);
+ let parts=[ascii('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n')],offset=parts[0].length,offs=[0];
+ for(let i=0;i<objects.length;i++){offs.push(offset);let b=concat([ascii(`${i+1} 0 obj\n`),objects[i],ascii('\nendobj\n')]);parts.push(b);offset+=b.length}
+ const xref=offset;let table=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+ for(let i=1;i<offs.length;i++)table+=`${String(offs[i]).padStart(10,'0')} 00000 n \n`;
+ parts.push(ascii(table+`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`));
+ return new Blob([concat(parts)],{type:'application/pdf'});
+}
+$('export').addEventListener('click',()=>{
+ try{
+  const g=config();if(g.cols*g.rows>400)throw Error('El PDF superaría las 400 páginas. Reducí la división.');
+  $('export').disabled=true;$('export').textContent='Generando…';
+  setTimeout(()=>{try{const blob=makePdf(g),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(filename.replace(/\.[^.]+$/,'')||'poster')+'_dividido.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}catch(e){alert('No se pudo generar el PDF: '+e.message)}finally{$('export').disabled=false;$('export').textContent='↓ Generar PDF'}},30);
+ }catch(e){alert(e.message)}
+});
+update();
+})();
+</script>
+</body>
+</html>
